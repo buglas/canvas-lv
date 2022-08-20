@@ -1,0 +1,185 @@
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>test</title>
+		<style>
+			html {
+				height: 100%;
+			}
+			body {
+				height: 100%;
+				margin: 0;
+        overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<script type="module">
+      import {Scene} from '/jsm/core/scene.js'
+      import {Poly} from '/jsm/objects/Poly.js'
+      import {Text2D} from '/jsm/objects/Text2D.js'
+      import {Vector3} from '/jsm/math/Vector3.js'
+      import {Vector2} from '/jsm/math/Vector2.js'
+      import {Matrix4} from '/jsm/math/Matrix4.js'
+      import {OrthographicCamera} from '/jsm/cameras/OrthographicCamera.js'
+      import {ArcCurve} from '/jsm/extras/curves/ArcCurve.js'
+      import {ImageDataEditor} from '/jsm/img/ImageDataEditor.js'
+      import {getCPVMI,getCPVI} from '/jsm/utils/CPVM.js'
+      import {Point} from '/jsm/objects/Point.js'
+
+      
+      const canvas=document.getElementById('canvas')
+      const [width,height]=[window.innerWidth,window.innerHeight]
+      canvas.width=width
+      canvas.height=height
+
+      // 场景
+      const scene=new Scene({canvas})
+      const aspect=width/height
+      const hh=1
+      const hw=hh*aspect
+
+      // 虚拟场景
+      const frame=scene.clone()
+
+      // 相机
+      const camera=new OrthographicCamera(-hw, hw, hh, -hh, 1, 1000)
+      camera.position=new Vector3(0,0,3)
+      camera.lookAt(0,0,0)
+
+      // 文字尺寸
+      const fontSize=150
+
+      /* 圆形裁剪路径 */
+      // 裁剪路径的半径
+      const cr=fontSize*2/height
+      // 裁剪路径-scene
+      const clipCircleS=new Poly()
+      // 裁剪路径-frame
+      const clipCircleF=new Poly()
+
+      // 描边文本
+      const textAttr={
+        text:'I LOVE U',
+        fontSize,
+        textAlign:'center',
+        textBaseline:'middle',
+        fontWeight:'bold',
+        clip:true,
+      }
+      const textStroke=new Text2D({
+        strokeStyle:'#000',
+        lineDash:[30,15],
+        ...textAttr
+      })
+      
+      // 矩形镂空裁剪路径
+      const clipRect=new Poly()
+
+      // 填充文字-scene
+      const textFillStyle='#000'
+      const textFillS=new Text2D({
+        fillStyle:textFillStyle,
+        ...textAttr
+      })
+
+      // 填充文字-frame
+      const textFillF=new Text2D({
+        fillStyle:textFillStyle,
+        ...textAttr
+      })
+
+      /* 栅格文字 */
+      const r=1
+      const gridText=new Point({
+        fillStyle:'#000',
+        r,
+        nodeType:'rect',
+        clip:false
+      })
+
+      // 用圆形裁剪路径裁剪填充文字
+      frame.add(clipCircleF)
+      frame.add(textFillF)
+      scene.add(clipCircleS)
+      scene.add(textStroke)
+      scene.add(clipRect)
+      scene.add(textFillS)
+      scene.add(gridText)
+      scene.render(camera)
+
+      // 矩形顶点
+      const rectPoints=[
+        new Vector2(-hw,hh),
+        new Vector2(hw,hh),
+        new Vector2(hw,-hh),
+        new Vector2(-hw,-hh),
+      ]
+
+      // 获取圆形裁剪路径的顶点
+      function getCirclePoints(x=0,r=cr){
+        return new ArcCurve(x,0,r,0,Math.PI*2)
+        .getPoints(18)
+      }
+
+      // 计算栅格文字的顶点
+      const dist=r*2+1
+      function computeGridText(mx=0,my=0){
+        // 渲染虚拟场景
+        frame.render(camera)
+        
+        // 栅格点集合
+        const vertices=[]
+        
+        // ImageData 编辑器
+        const imageDataEditor=new ImageDataEditor(
+          frame.getImageData(),dist
+        )
+
+        // 模型本地坐标系里的二维鼠标位
+        const mousePos=new Vector2(mx,my)
+
+        // 逐行列遍历
+        imageDataEditor.traverseYX((col,row,color)=>{
+          if(color[3]){
+            const p=new Vector3(col,row).applyMatrix4(
+              getCPVI(frame,camera)
+            )
+            // 当前点到鼠标点的向量
+            const v=new Vector2(p.x,p.y)
+              .sub(mousePos)
+            // 当前点到鼠标点的距离
+            const vl=v.length()
+            // 当前点向外扩散至cr，插值范围[2,1]
+            const s=2-Math.min(vl/cr,1)
+            // 基于s值放大当前点到鼠标点的距离
+            v.setLength(vl*s).add(mousePos)
+
+            vertices.push(v.x,v.y)
+          }
+        })
+        return new Float32Array(vertices)
+      }
+
+      // 动画
+      !(function ani(time=0){
+        // x方向位移圆形裁剪路径
+        const x=Math.cos(time*0.001)*aspect/aspect
+        const circlePoints=getCirclePoints(x);
+        clipCircleS.setFromPoints(circlePoints)
+        clipCircleF.setFromPoints(circlePoints)
+        clipRect.setFromPoints([rectPoints,circlePoints])
+        // 虚线偏移动画
+        textStroke.lineDashOffset=time*0.05
+        // 更新栅格文字的顶点
+        gridText.origin=computeGridText(x)
+        // 连续渲染
+        scene.render(camera)
+        requestAnimationFrame(ani)   
+      })()
+      
+    </script>
+    
+	</body>
+</html>

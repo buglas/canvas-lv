@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>test</title>
+		<style>
+			html {
+				height: 100%;
+			}
+			body {
+				height: 100%;
+				margin: 0;
+        overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<script type="module">
+      import {Scene} from '/jsm/core/scene.js'
+      import {Poly} from '/jsm/objects/Poly.js'
+      import {Vector2} from '/jsm/math/Vector2.js'
+      import {Vector3} from '/jsm/math/Vector3.js'
+      import {Matrix4} from '/jsm/math/Matrix4.js'
+      import {OrthographicCamera} from '/jsm/cameras/OrthographicCamera.js'
+
+      const canvas=document.getElementById('canvas')
+      const [width,height]=[window.innerWidth,window.innerHeight]
+      canvas.width=width
+      canvas.height=height
+      const scene=new Scene({canvas})
+      const aspect=width/height
+      const halfH=1
+      const halfW=halfH*aspect
+      const camera=new OrthographicCamera(-halfW, halfW, halfH, -halfH, 1, 1000)
+      camera.position=new Vector3(0,0,2)
+      
+      /* const [b0,b1,b2]=[
+        new Vector2(-0.8,0),
+        new Vector2(-0.2,0.5),
+        new Vector2(0.8,0),
+      ] */
+      /* function Bezier(b0,b1,b2){
+        return function(t){
+          const b0_1=b0.clone().lerp(b1,t)
+          const b1_1=b1.clone().lerp(b2,t)
+          return b0_1.lerp(b1_1,t)
+        }
+      }
+      const bezier=Bezier(b0,b1,b2) */
+
+      /* const bezierVertices=[]
+      for(let i=0;i<1;i+=0.01){
+        bezierVertices.push(...bezier(i))
+      } */
+
+      /* 
+      points 结构[p1.x,p1.y,p2.x,p2.y]
+      输出结果为平展开的float32位顶点集合
+      */
+      /* function bezier2D(points,t){
+        const len=points.length
+        if(len===2){
+          return [...points]
+        }else if(len===4){
+          const [x0,y0,x1,y1]=points
+          return [
+            x0+(x1-x0)*t,
+            y0+(y1-y0)*t,
+          ]
+        }else{
+          const array=[]
+          for(let i=0,l=len-2;i<l;i+=2){
+            array.push(
+              ...bezier2D(points.slice(i,i+4),t)
+            )
+          }
+          return bezier2D(array,t)
+        }
+      } */
+      function bezier2D(points,t){
+        const len=points.length
+        const n=(len/2)-1
+        
+        const j=1-t
+        let p=new Vector2()
+
+        for(let i=0;i<=n;i++){
+          let ni=n
+          if(i==0||i==n){
+            ni=1
+          }
+          const ind=i*2
+          p.add(
+            new Vector2(points[ind],points[ind+1])
+            .multiplyScalar(
+              ni*Math.pow(t,i)*Math.pow(j,n-i)
+            )
+          )
+        }
+
+        /* for(let i=0;i<len;i+=2){
+          let ni=n
+          if(i==0||i==len-2){
+            ni=1
+          }
+          p.add(
+            new Vector2(points[i],points[i+1])
+            .multiplyScalar(
+              ni*Math.pow(t,i/2)*Math.pow(j,n-i/2)
+            )
+          )
+        } */
+        return p
+      }
+      function getBezierVertices(vertices,d=0.01){
+        const bezierVertices=[]
+        for(let i=0;i<1+d;i+=d){
+          bezierVertices.push(
+            ...bezier2D(vertices,i)
+          )
+        }
+        return bezierVertices
+      }
+
+      
+      
+      const vertices=[
+        0,0,
+        0.7,0.8,
+        -0.7,0.8,
+        0,0,
+      ]
+
+      /* const vertices=[
+        0,0,
+        0.7,0.8,
+        -0.7,0.8,
+      ] */
+
+      const bezierVertices=getBezierVertices(vertices)
+      
+
+
+
+      const polyLine=new Poly({
+        strokeStyle:'#000',
+        lineDash:[8],
+        vertices,
+      })
+      scene.add(polyLine)
+
+      const polyBezier=new Poly({
+        strokeStyle:'#000',
+        vertices:bezierVertices,
+      })
+      scene.add(polyBezier)
+
+      scene.render(camera)
+
+    </script>
+	</body>
+</html>

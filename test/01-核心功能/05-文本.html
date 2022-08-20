@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>test</title>
+		<style>
+			html {
+				height: 100%;
+			}
+			body {
+				height: 100%;
+				margin: 0;
+        overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<script type="module">
+      import {Scene} from '/jsm/core/scene.js'
+      import {Text2D} from '/jsm/objects/Text2D.js'
+      import {Vector3} from '/jsm/math/Vector3.js'
+      import {Matrix4} from '/jsm/math/Matrix4.js'
+      import {OrthographicCamera} from '/jsm/cameras/OrthographicCamera.js'
+
+      const canvas=document.getElementById('canvas')
+      const [width,height]=[window.innerWidth,window.innerHeight]
+      canvas.width=width
+      canvas.height=height
+      const scene=new Scene({canvas})
+      const aspect=width/height
+      const halfH=3
+      const halfW=halfH*aspect
+
+      // 投影矩阵
+      const camera=new OrthographicCamera(-halfW, halfW, halfH, -halfH, 1, 1000)
+      // 视图矩阵
+      camera.position=new Vector3(0,2,2)
+      // 更新视图矩阵
+      // camera.updateWorldMatrix()
+      // lookAt()方法自带视图矩阵的更新
+      camera.lookAt(0,0,0)
+
+      // 文本
+      const text=new Text2D({
+        fillStyle:'#000',
+        text:'好好学习，天天上上！',
+        fontSize:78,
+        textAlign:'center',
+        textBaseline:'middle',
+        fontWeight:'bold'
+      })
+      scene.add(text)
+
+      console.log(text);
+      scene.render(camera)
+
+      
+      
+    </script>
+    
+	</body>
+</html>

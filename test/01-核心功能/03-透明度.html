@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>test</title>
+		<style>
+			html {
+				height: 100%;
+			}
+			body {
+				height: 100%;
+				margin: 0;
+        overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<script type="module">
+      import {Scene} from '/jsm/core/scene.js'
+      import {Poly} from '/jsm/objects/Poly.js'
+      import {Vector2} from '/jsm/math/Vector2.js'
+      import {Vector3} from '/jsm/math/Vector3.js'
+      import {Matrix4} from '/jsm/math/Matrix4.js'
+      import {OrthographicCamera} from '/jsm/cameras/OrthographicCamera.js'
+      import {Path} from '/jsm/extras/core/Path.js'
+      import {Group} from '/jsm/objects/Group.js'
+
+      const canvas=document.getElementById('canvas')
+      const [width,height]=[window.innerWidth,window.innerHeight]
+      canvas.width=width
+      canvas.height=height
+      const scene=new Scene({canvas})
+      const aspect=width/height
+      const halfH=1
+      const halfW=halfH*aspect
+      const camera=new OrthographicCamera(-halfW, halfW, halfH, -halfH, 1, 1000)
+      camera.position=new Vector3(0,0,2)
+      
+      const vertices=new Float32Array([
+        0,0.5,
+        -0.5,-0.5,
+        0.5,-0.5,
+      ])
+      const poly=new Poly({
+        fillStyle:'#000',
+        vertices,
+        close:true,
+        alpha:0.5
+      })
+      scene.add(poly)
+
+      const poly2=new Poly({
+        fillStyle:'#000',
+        vertices,
+        alpha:0.5
+      })
+      const group=new Group()
+      group.alpha=0.3
+      group.position.set(0,-0.2,0)
+      group.add(poly2)
+      scene.add(group)
+
+
+      scene.render(camera)
+
+    </script>
+	</body>
+</html>

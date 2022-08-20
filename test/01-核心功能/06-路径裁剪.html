@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>test</title>
+		<style>
+			html {
+				height: 100%;
+			}
+			body {
+				height: 100%;
+				margin: 0;
+        overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<script type="module">
+      import {Scene} from '/jsm/core/scene.js'
+      import {Poly} from '/jsm/objects/Poly.js'
+      import {Text2D} from '/jsm/objects/Text2D.js'
+      import {Vector3} from '/jsm/math/Vector3.js'
+      import {Matrix4} from '/jsm/math/Matrix4.js'
+      import {OrthographicCamera} from '/jsm/cameras/OrthographicCamera.js'
+      import {ArcCurve} from '/jsm/extras/curves/ArcCurve.js'
+
+      const canvas=document.getElementById('canvas')
+      const [width,height]=[window.innerWidth,window.innerHeight]
+      canvas.width=width
+      canvas.height=height
+      const scene=new Scene({canvas})
+      const aspect=width/height
+      const halfH=1
+      const halfW=halfH*aspect
+
+      // 相机
+      const camera=new OrthographicCamera(-halfW, halfW, halfH, -halfH, 1, 1000)
+      camera.position=new Vector3(0,0,3)
+      camera.lookAt(0,0,0)
+
+      // 裁剪路径
+      const path = new ArcCurve(0,0,0.3,0,Math.PI*2)
+      const points = path.getPoints(18);
+      const poly=new Poly({
+        // strokeStyle:'#000'
+      })
+      poly.setFromPoints(points)
+      scene.add(poly)
+
+      // 文本
+      {
+        const text=new Text2D({
+          fillStyle:'#000',
+          text:'好好学习，天天上上！',
+          fontSize:78,
+          textAlign:'center',
+          textBaseline:'middle',
+          fontWeight:'bold',
+          clip:true,
+        })
+        scene.add(text)
+      }
+      {
+        const text=new Text2D({
+          strokeStyle:'#000',
+          text:'好好学习，天天上上！',
+          fontSize:78,
+          textAlign:'center',
+          textBaseline:'middle',
+          fontWeight:'bold',
+          // clip:true,
+        })
+        scene.add(text)
+      }
+
+      !(function ani(time=1000){
+        poly.position.x=Math.cos(time*0.001)
+        scene.ctx.clearRect(0,0,width,height)
+        scene.render(camera)
+        // requestAnimationFrame(ani)   
+      })()
+      
+    </script>
+    
+	</body>
+</html>

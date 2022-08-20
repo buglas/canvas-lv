@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>test</title>
+		<style>
+			html {
+				height: 100%;
+			}
+			body {
+				height: 100%;
+				margin: 0;
+        overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<script type="module">
+      import {Scene} from '/jsm/core/scene.js'
+      import {Poly} from '/jsm/objects/Poly.js'
+      import {Vector2} from '/jsm/math/Vector2.js'
+      import {Vector3} from '/jsm/math/Vector3.js'
+      import {Matrix4} from '/jsm/math/Matrix4.js'
+      import {OrthographicCamera} from '/jsm/cameras/OrthographicCamera.js'
+
+      const canvas=document.getElementById('canvas')
+      const [width,height]=[window.innerWidth,window.innerHeight]
+      canvas.width=width
+      canvas.height=height
+      const scene=new Scene({canvas})
+      const aspect=width/height
+      const halfH=1
+      const halfW=halfH*aspect
+      const camera=new OrthographicCamera(-halfW, halfW, halfH, -halfH, 1, 1000)
+      camera.position=new Vector3(0,0,2)
+      
+      /* 二次贝塞尔算法 */
+      function Bezier2D(vertices){
+        const [b0,b1,b2]=[
+          new Vector2(vertices[0],vertices[1]),
+          new Vector2(vertices[2],vertices[3]),
+          new Vector2(vertices[4],vertices[5]),
+        ]
+        return function(t){
+          const b0_1=b0.lerp(b1,t)
+          const b1_1=b1.lerp(b2,t)
+          return b0_1.lerp(b1_1,t)
+        }
+      }
+
+      // 根据贝塞尔节点获取贝塞尔曲线的顶点信息
+      function getVertices(vertices,d=0.01){
+        const bezier=Bezier2D(vertices)
+        const bezierVertices=[]
+        for(let i=0;i<1+d;i+=d){
+          bezierVertices.push(...bezier(i))
+        }
+        return bezierVertices
+      }
+
+      /* 贝塞尔节点 */
+      const nodes=[
+        // 起点
+        -0.8,0,
+        // 控制点
+        -0.2,0.5,
+        // 结束点
+        0.8,0
+      ]
+
+      /* 贝塞尔曲线的顶点 */
+      const vertices=getVertices(nodes,0.01)
+
+      /* 辅助线 */
+      const helperLine=new Poly({
+        strokeStyle:'#000',
+        lineDash:[8],
+        vertices:nodes,
+      })
+      scene.add(helperLine)
+
+      /* 贝塞尔曲线 */
+      const bezierCurver=new Poly({
+        strokeStyle:'#000',
+        vertices,
+      })
+      scene.add(bezierCurver)
+
+      /* 渲染 */
+      scene.render(camera)
+
+    </script>
+	</body>
+</html>

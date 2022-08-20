@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>test</title>
+		<style>
+			html {
+				height: 100%;
+			}
+			body {
+				height: 100%;
+				margin: 0;
+        overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<script type="module">
+      import {Scene} from '/jsm/core/scene.js'
+      import {Poly} from '/jsm/objects/Poly.js'
+      import {Text2D} from '/jsm/objects/Text2D.js'
+      import {Vector3} from '/jsm/math/Vector3.js'
+      import {Vector2} from '/jsm/math/Vector2.js'
+      import {Matrix4} from '/jsm/math/Matrix4.js'
+      import {OrthographicCamera} from '/jsm/cameras/OrthographicCamera.js'
+      import {ArcCurve} from '/jsm/extras/curves/ArcCurve.js'
+      import {Point} from '/jsm/objects/Point.js'
+      import {ImageDataEditor} from '/jsm/img/ImageDataEditor.js'
+      import {getCPVMI,getCPVI} from '/jsm/utils/CPVM.js'
+
+      const canvas=document.getElementById('canvas')
+      const [width,height]=[window.innerWidth,window.innerHeight]
+      canvas.width=width
+      canvas.height=height
+      const scene=new Scene({canvas})
+      const aspect=width/height
+      const hh=1
+      const hw=hh*aspect
+
+      /* 相机 */
+      const camera=new OrthographicCamera(-hw, hw, hh, -hh, 1, 1000)
+      camera.position=new Vector3(0,0,3)
+      camera.lookAt(0,0,0)
+
+      // 填充文字
+      const fontSize=150
+      const textFill=new Text2D({
+        fillStyle:'#000',
+        text:'I LOVE U',
+        fontSize,
+        textAlign:'center',
+        textBaseline:'middle',
+        fontWeight:'bold',
+      })
+      scene.add(textFill)
+      scene.render(camera)
+      scene.remove(textFill)
+      
+      // 节点尺寸
+      const r=1
+      // 节点间距
+      const dist=r*2+1
+
+      // 栅格点集合
+      const vertices=[]
+      
+      // ImageData 编辑器
+      const imageDataEditor=new ImageDataEditor(
+        scene.getImageData(),dist
+      )
+      // 逐行列遍历
+      imageDataEditor.traverseYX((x,y,color)=>{
+        if(color[3]){
+          // canvas 坐标转世界坐标
+          const p=new Vector3(x,y).applyMatrix4(
+            getCPVI(scene,camera)
+          )
+          vertices.push(
+            p.x,p.y
+          )
+        }
+      })
+
+      // 顶点集合长度
+      const len=vertices.length
+
+      // 当前点
+      const origin=new Float32Array(vertices)
+
+      // 老点
+      const oldVertices=new Float32Array([...vertices])
+
+      // 顶点对象
+      const points=new Point({
+        fillStyle:'#000',
+        r,
+        origin,
+        nodeType:'rect'
+      })
+      scene.add(points)
+
+      // 鼠标扫描范围
+      const maxR=fontSize*2/height
+      canvas.addEventListener('mousemove',function({clientX,clientY}){
+        // canvas坐标转模型的本地坐标
+        const p=new Vector3(clientX,clientY,0)
+        .applyMatrix4(getCPVMI(points,camera))
+        // 模型本地坐标系里的二维鼠标点
+        const mousePos=new Vector2(p.x,p.y)
+        // 遍历节点
+        for(let i=0;i<len;i+=2){
+          // 当前点到鼠标点的向量
+          const v=new Vector2(oldVertices[i],oldVertices[i+1])
+            .sub(mousePos)
+          // 当前点到鼠标点的距离
+          const vl=v.length()
+          // 当前点向外扩散至maxR，插值范围[2,1]
+          const s=2-Math.min(vl/maxR,1)
+          // 基于s值放大当前点到鼠标点的距离
+          v.setLength(vl*s).add(mousePos)
+          // 更新
+          if(vl<maxR){
+            origin[i]=v.x
+            origin[i+1]=v.y
+          }else{
+            origin[i]=oldVertices[i]
+            origin[i+1]=oldVertices[i+1]
+          }
+        }
+      })
+
+      !(function ani(time=0){
+        scene.render(camera)
+        requestAnimationFrame(ani)   
+      })()
+
+    </script>
+    
+	</body>
+</html>
