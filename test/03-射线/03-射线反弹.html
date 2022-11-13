@@ -48,7 +48,11 @@
 			camera.lookAt(0, 0, 0)
 
 			// 图形路径
-			const path = new ArcCurve(0, 0, 0.5, 0, Math.PI * 2)
+			// const path = new ArcCurve(0, 0, 0.5, 0, Math.PI * 2)
+			const path = new Path()
+			path.moveTo(0, -0.25)
+			path.bezierCurveTo(0.5, -0.125, 0.45, 0.75, 0, 0.25)
+			path.bezierCurveTo(-0.45, 0.75, -0.5, -0.125, 0, -0.25)
 			const pathPoints = path.getPoints(12)
 			// 图形法线
 			const pathNormals = []
@@ -59,16 +63,22 @@
 			}
 
 			// 射线
-			const origin = new Vector2().lerpVectors(
-				pathPoints[0],
-				pathPoints[1],
+			let cur = 0
+			const origin = _vector.lerpVectors(
+				pathPoints[cur],
+				pathPoints[cur + 1],
 				0.5
 			)
-			const direction = new Vector2(-1, 0)
+			// const direction = new Vector2(-1, 0)
+			const direction = new Vector2()
+				.lerpVectors(pathPoints[2], pathPoints[3], 0.5)
+				.sub(origin)
+				.normalize()
+
 			let ray = new Ray2D(origin, direction)
 
 			// 反弹次数
-			const reflectNum = 3
+			const reflectNum = 5
 			// 射线顶点
 			const rayPoints = [origin.clone()]
 			// 反弹
@@ -79,11 +89,17 @@
 			//遍历顶点寻找反射点
 			function rayTrace() {
 				for (let i = 0, len = pathPoints.length - 1; i < len; i++) {
+					// 很重要
+					if (i === cur) {
+						continue
+					}
 					const [p1, p2] = [pathPoints[i], pathPoints[i + 1]]
 					const p = ray.intersectSegment(p1, p2)
 					if (p) {
 						rayPoints.push(p)
 						ray.reflect(p, pathNormals[i])
+						cur = i
+						break
 					}
 				}
 			}

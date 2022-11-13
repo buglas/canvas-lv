@@ -212,14 +212,14 @@ class Ray2D {
 		}
 		// 判断交点是否在线段中
 		// 线段长度
-		const seglen = p1.lengthSq(p2)
+		const seglen = p1.distanceToSquared(p2)
 		// 交点到p1的距离
-		const d1 = interPoint.lengthSq(p1)
+		const d1 = interPoint.distanceToSquared(p1)
 		if (d1 > seglen) {
 			return null
 		}
 		// 交点到p2的距离
-		const d2 = interPoint.lengthSq(p2)
+		const d2 = interPoint.distanceToSquared(p2)
 		if (d2 > seglen) {
 			return null
 		}
