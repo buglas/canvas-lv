@@ -35,7 +35,7 @@ class DomCreator{
       }=option
       const htmlElement=document.createElement(tagName) as HTMLElement
       id&&(htmlElement.id=id)
-      htmlElement.classList.add(classPrefix+className)
+      className&&htmlElement.classList.add(classPrefix+className)
       htmlElement.innerText=innerText
       for(let [k,v] of Object.entries(style)){
         (htmlElement.style as any)[k]=v

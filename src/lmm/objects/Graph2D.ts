@@ -31,6 +31,17 @@ class Graph2D<S extends Geometry|GeometryGroup,T extends StandStyle> extends Obj
 		return bool
   }
 
+  /* 点位是否在路径的描边上 */
+  isPointInStroke(point:Vector2){
+    const {geometry,style:{lineWidth=1}} = this
+    virtuallyCtx.save()
+    virtuallyCtx.lineWidth=lineWidth
+    geometry.crtPath(virtuallyCtx)
+    const bool = virtuallyCtx.isPointInStroke(point.x, point.y)
+    virtuallyCtx.restore()
+    return bool
+  }
+
   /* 获取物体在世界坐标系内的边界 */
   getWorldBoundingBox(){
     const {geometry,worldMatrix}=this

@@ -37,7 +37,7 @@ class Panel{
     }=option
     const {style}=domElement
     domElement.setAttribute('data-uuid',this.uuid)
-    domElement.classList.add(this.classPrefix+this.class)
+    this.class&&domElement.classList.add(this.classPrefix+this.class)
     style.width='100%'
     style.height='100%'
     this.domElement=domElement
@@ -85,15 +85,32 @@ class Panel{
     return ind
   }
   setSize(size:number=100,parentDirection?:DirectionType){
+    this.size=size
+    let wh=this.getParentWH(parentDirection)
+    this.domElement.style[wh]=size+'%'
+  }
+  getParentWH(parentDirection?:DirectionType){
     const {parent}=this
     let wh:'width'|'height'='width'
     if(parent){
       wh=parent.getWH()
     }else if(parentDirection){
       wh=parentDirection=='row'?'width':'height'
-    } 
-    this.size=size
-    this.domElement.style[wh]=size+'%'
+    }
+    return wh
+  }
+  
+  getBrother():Panel|undefined{
+    const {parent}=this
+    if(!parent||!parent.isFull()){
+      return undefined
+    }
+    for(let child of parent.children){
+      if(child!=this){
+        return child
+      }
+    }
+    return undefined
   }
   traverse(fn:(panel:Panel)=>void|boolean){
     if(fn(this)){
@@ -343,7 +360,19 @@ class PanelDomCreator extends DomCreator{
                   this.onTitleMouseDown(event,uuid)
                 }
               }
-            }
+            },
+            {
+              type:'mouseenter',
+              listener:(event:any)=>{
+                this.onTitleMouseEnter(event)
+              }
+            },
+            {
+              type:'mouseleave',
+              listener:(event:any)=>{
+                this.onTitleMouseLeave(event)
+              }
+            },
           ]
         },
         {
@@ -356,9 +385,12 @@ class PanelDomCreator extends DomCreator{
   } 
   
   onTitleMouseDown(event:MouseEvent,uuid:string){}
+  onTitleMouseEnter(event:MouseEvent){}
+  onTitleMouseLeave(event:MouseEvent){}
 }
 
-type PanelDragStateType='start'|'dragging'
+type panelHoveStateType='hotArea'|'hotLine'|undefined
+type PanelControlStateType='startDrag'|'dragging'|'startStretch'|'stretching'|undefined
 const hotZoneTypes:{
   direction:DirectionType
   order:OrderType
@@ -387,9 +419,11 @@ class PanelController{
   panelTree=new PanelWrapper()
   panelTreeMask=new BasicScene()
   hotZones=new Group()
+  hotLines=new Group()
   currentMousedownUUID:string|undefined
   currentHotZone:Object2D|undefined
-  panelDragState:PanelDragStateType|undefined
+  panelControlState:PanelControlStateType
+  currentHoverLine:Graph2D<PolyGeometry,StandStyle>|undefined
   currentDragPanel:Panel|undefined
   splitArea:Graph2D<PolyGeometry,StandStyle>=new Graph2D(
     new PolyGeometry().close(),
@@ -409,10 +443,19 @@ class PanelController{
       shadowOffsetY:2
     })
   )
+  splitLine:Graph2D<PolyGeometry,StandStyle>=new Graph2D(
+    new PolyGeometry(),
+    new StandStyle({
+      strokeStyle:'rgba(0,0,0,0.5)',
+      lineWidth:1,
+      lineDash:[5,3]
+    })
+  )
   dragStart=new Vector2()
   dragDist=new Vector2()
+  panelContResizeObserver:ResizeObserver
   constructor(){
-    const {domElement,panelDomCreator,panelTree,panelTreeMask,panelTreeMask:{canvas},hotZones,floatShape,dragStart,dragDist,splitArea}=this
+    const {domElement,panelDomCreator,panelTree,panelTreeMask,panelTreeMask:{canvas},hotZones,floatShape,dragStart,dragDist,splitArea,hotLines,splitLine}=this
     domElement.style.position='relative'
     domElement.style.width='100%'
     domElement.style.height='100%'
@@ -428,6 +471,9 @@ class PanelController{
     hotZones.name='hotZones'
     panelTreeMask.add(hotZones)
 
+    hotZones.name='hotLines'
+    panelTreeMask.add(hotLines)
+
     splitArea.name='splitArea'
     splitArea.visible=false
     panelTreeMask.add(splitArea)
@@ -436,19 +482,46 @@ class PanelController{
     floatShape.visible=false
     panelTreeMask.add(floatShape)
 
+    splitLine.name='splitLine'
+    splitLine.visible=false
+    panelTreeMask.add(splitLine)
+
+    this.panelContResizeObserver=new ResizeObserver(entries => {
+      entries.forEach(entry => {
+        // console.log(`元素: `,entry.target);
+        // console.log(`尺寸变化: `, entry.contentRect);
+      });
+    });
+
     panelDomCreator.onTitleMouseDown=({pageX,pageY },uuid)=>{
+      if(this.panelControlState){return}
       dragStart.copy(panelTreeMask.pageToCanvas(pageX,pageY))
       this.currentMousedownUUID=uuid
-      this.panelDragState='start'
+      this.panelControlState='startDrag'
       const panel=panelTree.getChildByUUID(uuid)
       panel&&this.updateFloatPanelGeometry(panel)
     }
+    panelDomCreator.onTitleMouseEnter=()=>{
+      // console.log('onTitleMouseEnter');
+    }
+    panelDomCreator.onTitleMouseLeave=()=>{
+      // console.log('onTitleMouseLeave');
+    }
+    domElement.addEventListener('mousedown',({button,pageX,pageY })=>{
+      if(button==0 ){
+        dragStart.copy(panelTreeMask.pageToCanvas(pageX,pageY))
+        if(this.currentHoverLine){
+          this.panelControlState='startStretch'
+        }
+      }
+    })
     domElement.addEventListener('mousemove',({buttons,pageX,pageY })=>{
+      const worldPosition=panelTreeMask.pageToWorld(pageX,pageY);
       if(buttons==1){
         const dragEnd=panelTreeMask.pageToCanvas(pageX,pageY)
         dragDist.copy(dragEnd.clone().sub(dragStart))
-        if(this.panelDragState=='start'){
-          this.panelDragState='dragging'
+        if(this.panelControlState=='startDrag'){
+          this.panelControlState='dragging'
           if(this.currentMousedownUUID==undefined){
             console.warn('currentMousedownUUID 丢失')
           }else{
@@ -463,24 +536,19 @@ class PanelController{
               console.warn('没有找到拖拽目标')
             }
           }
+        }else if(this.panelControlState=='startStretch'){
+          this.updateHotZone()
+          this.panelControlState='stretching'
         }
-        if(this.panelDragState=='dragging'){
-          // console.log('dragging');
-          const worldPosition=panelTreeMask.pageToWorld(pageX,pageY);
+        if(this.panelControlState=='dragging'){
           let isPointInHotZone=false
-          let i=0
           for(let hotZone of hotZones.children){
-            i++
             if(!(hotZone instanceof Graph2D)){continue}
             if(hotZone.isPointIn(worldPosition)){
               if(this.currentHotZone!=hotZone){
-                // console.log('i',i);
-                // console.log('this.currentHotZone',this.currentHotZone);
-                console.log('hotZone',hotZone);
                 this.currentHotZone=hotZone
                 const {userData:{splitRectPoints}}=hotZone
                 if(splitRectPoints&&splitRectPoints instanceof Array){
-                  console.log('splitRectPoints',splitRectPoints);
                   splitArea.geometry.position=splitRectPoints
                 }
               }
@@ -489,68 +557,123 @@ class PanelController{
             }
           }
           !isPointInHotZone&&(this.currentHotZone=undefined)
-          // this.currentHotZone=currentHotZone
+        }else if(this.panelControlState=='stretching'){
+          // 拉伸panel，位移splitLine
+          const {currentHoverLine}=this
+          if(!currentHoverLine){
+            console.warn('currentHoverLine 丢失')
+          }else{
+            const {userData:{panel}}=currentHoverLine;
+            this.stretchPanel(panel)
+            // console.log('panel',panel);
+          }
         }
         this.moveFloatPanel()
         dragStart.copy(dragEnd)
-        panelTreeMask.render()
+        
+      }else{
+        let isHover=false
+        for(let hotLine of hotLines.children){
+          if(!(hotLine instanceof Graph2D)){continue}
+          if(hotLine.isPointInStroke(worldPosition)){
+            if(this.currentHoverLine!=hotLine){
+              this.currentHoverLine=hotLine as Graph2D<PolyGeometry,StandStyle>
+              splitLine.visible=true
+              splitLine.geometry=hotLine.geometry
+            }
+            isHover=true
+            break
+          }
+        }
+        if(!isHover){
+          this.currentHoverLine=undefined
+          splitLine.visible=false
+        }
       }
+      panelTreeMask.render()
     })
     window.addEventListener('mouseup',()=>{
       if(this.currentHotZone){
         const {userData:{panel,direction,order}}=this.currentHotZone as any
         panel.addPanel(this.currentDragPanel,direction,order)
+      }
+      if(this.panelControlState){
         this.updateHotZone()
       }
-      this.panelDragState=undefined
+      this.panelControlState=undefined
       this.currentMousedownUUID=undefined
       this.currentDragPanel=undefined
       this.currentHotZone=undefined
+      this.currentHoverLine=undefined
       splitArea.visible=false
       floatShape.visible=false
+      splitLine.visible=false
       floatShape.position=new Vector2()
+      splitLine.position=new Vector2()
       panelTreeMask.render()
     })
   }
   updateHotZone(){
-    const {domElement,panelTree,hotZones,panelTreeMask}=this
+    const {domElement,panelTree,hotZones,panelTreeMask,hotLines}=this
     const treeBound=domElement.getBoundingClientRect();
+    hotLines.clear()
     hotZones.clear()
-    panelTree.traversePanel((panel)=>{
+    panelTree.traverse(panel=>{
+      if(panel instanceof PanelWrapper){
+        const {children,direction}=panel
+        if(children.length!=2){return}
+        const {minX,minY,maxX,maxY}=getPanelBoundingBox(children[0])
+        const linePoints=direction=='column'?[minX,maxY,maxX,maxY]:[maxX,minY,maxX,maxY]
+        const lineObj=new Graph2D(
+          new PolyGeometry(linePoints),
+          new StandStyle({strokeStyle:'rgba(255,0,0,0)',lineWidth:12})
+        )
+        const userData:{panel:Panel}={panel:children[0]}
+        lineObj.userData=userData
+        hotLines.add(lineObj)
+      }else{
+        const {minX,minY,maxX,maxY,width,height}=getPanelBoundingBox(panel)
+        const centerX=minX+width/2
+        const centerY=minY+height/2
+        const panelContPoints:[number,number][]=[
+          [minX,minY],
+          [maxX,minY],
+          [maxX,maxY],
+          [minX,maxY],
+        ]
+        hotZoneTypes.forEach((type,ind1)=>{
+          const ind2=(ind1+1)%4
+          const p1=panelContPoints[ind1]
+          const p2=panelContPoints[ind2]
+          const rectObj=new Graph2D(
+            new PolyGeometry([...p1,...p2,centerX,centerY])
+          )
+          let p3p4=type.direction=='column'?[p2[0],centerY,p1[0],centerY]:[centerX,p2[1],centerX,p1[1]]
+          const userData:{
+            panel:Panel
+            splitRectPoints:number[]
+            direction: DirectionType
+            order: OrderType
+          }={
+            panel,
+            splitRectPoints:[...p1,...p2,...p3p4],
+            ...type,
+          }
+          rectObj.userData=userData
+          hotZones.add(rectObj)
+        })
+      }
+    })
+    panelTreeMask.render()
+    function getPanelBoundingBox(panel:Panel){
       const panelBound=panel.domElement.getBoundingClientRect()
       const {width,height}=panelBound
       const minX=panelBound.x-treeBound.x
       const minY=panelBound.y-treeBound.y
       const maxX=minX+width
       const maxY=minY+height
-      const centerX=minX+width/2
-      const centerY=minY+height/2
-
-      // hotZoneTypes
-      const panelContPoints:[number,number][]=[
-        [minX,minY],
-        [maxX,minY],
-        [maxX,maxY],
-        [minX,maxY],
-      ]
-      hotZoneTypes.forEach((type,ind1)=>{
-        const ind2=(ind1+1)%4
-        const p1=panelContPoints[ind1]
-        const p2=panelContPoints[ind2]
-        const rectObj=new Graph2D(
-          new PolyGeometry([...p1,...p2,centerX,centerY]),
-          new StandStyle({fillStyle:`rgba(${Math.random()*255},${Math.random()*255},${Math.random()*255},0.1)`})
-        )
-        let p3p4=type.direction=='column'?[p2[0],centerY,p1[0],centerY]:[centerX,p2[1],centerX,p1[1]]
-        rectObj.userData={
-          panel,
-          ...type,
-          splitRectPoints:[...p1,...p2,...p3p4]
-        }
-        hotZones.add(rectObj)
-      })
-    })
-    panelTreeMask.render()
+      return {minX,minY,maxX,maxY,width,height}
+    }
   }
   pushPanel(type:PanelType='3D',direction:DirectionType='row'){
     const {panelDomCreator,panelTree}=this
@@ -569,6 +692,7 @@ class PanelController{
       domElement.replaceChild(panelTree.domElement,oldPanelTreeDomElement)
     }
     this.updateHotZone()
+    this.observerPanelContResize()
   }
   appendDomElementTo(cont:HTMLElement){
     const {domElement,panelTreeMask}=this
@@ -595,6 +719,39 @@ class PanelController{
   moveFloatPanel(){
     const {dragDist,floatShape}=this
     floatShape.position.add(dragDist)
+  }
+  observerPanelContResize(){
+    const {domElement,panelContResizeObserver}=this
+    const panelContents=domElement.getElementsByClassName('lv-robot-panel-content')
+    Array.from(panelContents).forEach(ele=>{
+      panelContResizeObserver.observe(ele);
+    })
+  }
+  stretchPanel(panel:Panel){
+    const {parent}=panel
+    if(!parent){
+      console.warn('根元素不可拉伸！')
+      return
+    }
+    const {dragDist,splitLine}=this
+    let percentSize;
+    const {domElement:{clientWidth:pw,clientHeight:ph}}=parent
+    const {domElement:{offsetWidth:cw,offsetHeight:ch}}=panel
+    if(parent.direction=='row'){
+      percentSize=100*(cw+dragDist.x)/pw
+      splitLine.position.x+=dragDist.x
+    }else{
+      percentSize=100*(ch+dragDist.y)/ph
+      splitLine.position.y+=dragDist.y
+    }
+    const wh=parent.getWH()
+    panel.size=percentSize
+    panel.domElement.style[wh]=percentSize+'%'
+    const brother=panel.getBrother()
+    if(brother){
+      brother.size=100-percentSize
+      brother.domElement.style[wh]=brother.size+'%'
+    }
   }
 }
 
