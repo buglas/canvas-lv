@@ -94,7 +94,7 @@ overflow: hidden;
   box-sizing: border-box;
   border: 1px solid #d6d6d6;
   /* 禁止元素被拖拽 */
-  user-drag: none;
+  /* user-drag: none; */
   -webkit-user-drag: none; /* Safari 等 WebKit 内核浏览器 */
   /* 可选：禁止文本被选中（防止拖拽文本） */
   user-select: none;
