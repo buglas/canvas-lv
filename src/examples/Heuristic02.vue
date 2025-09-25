@@ -4,8 +4,8 @@ import { OrbitControler } from '../lmm/controler/OrbitControler'
 import { Scene } from '../lmm/core/Scene'
 import { Vector2 } from '../lmm/math/Vector2'
 import { Group } from '../lmm/objects/Group'
-import { Grid } from '../component/Grid'
-import { Lattice } from '../component/Lattice'
+import { Grid } from '../utils/Grid'
+import { Lattice } from '../utils/Lattice'
 
 /* 文章链接：https://juejin.cn/post/7262634764301697080 */
 

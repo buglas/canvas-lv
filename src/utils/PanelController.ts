@@ -362,9 +362,9 @@ class PanelDomCreator extends DomCreator{
               }
             },
             {
-              type:'mouseenter',
+              type:'mousemove',
               listener:(event:any)=>{
-                this.onTitleMouseEnter(event)
+                this.onTitleMouseMove(event)
               }
             },
             {
@@ -385,11 +385,11 @@ class PanelDomCreator extends DomCreator{
   } 
   
   onTitleMouseDown(event:MouseEvent,uuid:string){}
-  onTitleMouseEnter(event:MouseEvent){}
+  onTitleMouseMove(event:MouseEvent){}
   onTitleMouseLeave(event:MouseEvent){}
 }
 
-type panelHoveStateType='hotArea'|'hotLine'|undefined
+type HoverStateType='readyDrag'|'readyStretch'|undefined
 type PanelControlStateType='startDrag'|'dragging'|'startStretch'|'stretching'|undefined
 const hotZoneTypes:{
   direction:DirectionType
@@ -446,7 +446,7 @@ class PanelController{
   splitLine:Graph2D<PolyGeometry,StandStyle>=new Graph2D(
     new PolyGeometry(),
     new StandStyle({
-      strokeStyle:'rgba(0,0,0,0.5)',
+      strokeStyle:'rgba(0,0,0,0.8)',
       lineWidth:1,
       lineDash:[5,3]
     })
@@ -454,6 +454,7 @@ class PanelController{
   dragStart=new Vector2()
   dragDist=new Vector2()
   panelContResizeObserver:ResizeObserver
+  hoverState:HoverStateType
   constructor(){
     const {domElement,panelDomCreator,panelTree,panelTreeMask,panelTreeMask:{canvas},hotZones,floatShape,dragStart,dragDist,splitArea,hotLines,splitLine}=this
     domElement.style.position='relative'
@@ -501,11 +502,18 @@ class PanelController{
       const panel=panelTree.getChildByUUID(uuid)
       panel&&this.updateFloatPanelGeometry(panel)
     }
-    panelDomCreator.onTitleMouseEnter=()=>{
-      // console.log('onTitleMouseEnter');
+    panelDomCreator.onTitleMouseMove=()=>{
+      // console.log('onTitleMouseMove');
+      // console.log('this.hoverState',this.hoverState);
+      if(!this.hoverState){
+        this.hoverState='readyDrag'
+      }
     }
     panelDomCreator.onTitleMouseLeave=()=>{
       // console.log('onTitleMouseLeave');
+      if(this.hoverState=='readyDrag'){
+        this.hoverState=undefined
+      }
     }
     domElement.addEventListener('mousedown',({button,pageX,pageY })=>{
       if(button==0 ){
@@ -565,12 +573,10 @@ class PanelController{
           }else{
             const {userData:{panel}}=currentHoverLine;
             this.stretchPanel(panel)
-            // console.log('panel',panel);
           }
         }
         this.moveFloatPanel()
         dragStart.copy(dragEnd)
-        
       }else{
         let isHover=false
         for(let hotLine of hotLines.children){
@@ -582,14 +588,19 @@ class PanelController{
               splitLine.geometry=hotLine.geometry
             }
             isHover=true
+            this.hoverState='readyStretch'
             break
           }
         }
         if(!isHover){
           this.currentHoverLine=undefined
           splitLine.visible=false
+          if(this.hoverState=='readyStretch'){
+            this.hoverState=undefined
+          }
         }
       }
+      this.updateCursor()
       panelTreeMask.render()
     })
     window.addEventListener('mouseup',()=>{
@@ -612,6 +623,28 @@ class PanelController{
       splitLine.position=new Vector2()
       panelTreeMask.render()
     })
+  }
+  updateCursor(){
+    const {hoverState,domElement,currentHoverLine,}=this
+    if(hoverState=='readyStretch'){
+      if(currentHoverLine){
+        const {userData:{panel}}=currentHoverLine
+        if(panel){
+          const {parent}=panel as Panel
+          if(parent){
+            domElement.style.cursor=parent.direction=='column'?'ns-resize':'ew-resize'
+          }
+        }else{
+          console.warn('panel 丢失')
+        }
+      }
+    }else if(hoverState=='readyDrag'){
+      domElement.style.cursor='move'
+    }else{
+      domElement.style.cursor='default'
+    }
+    
+    // domElement.style.cursor='default'
   }
   updateHotZone(){
     const {domElement,panelTree,hotZones,panelTreeMask,hotLines}=this
@@ -734,23 +767,34 @@ class PanelController{
       return
     }
     const {dragDist,splitLine}=this
-    let percentSize;
+    let percentSize,xy:'x'|'y',childSize,parentSize,wh:'width'|'height';
     const {domElement:{clientWidth:pw,clientHeight:ph}}=parent
     const {domElement:{offsetWidth:cw,offsetHeight:ch}}=panel
+    
     if(parent.direction=='row'){
-      percentSize=100*(cw+dragDist.x)/pw
-      splitLine.position.x+=dragDist.x
+      childSize=cw
+      parentSize=pw
+      wh='width'
+      xy='x'
     }else{
-      percentSize=100*(ch+dragDist.y)/ph
-      splitLine.position.y+=dragDist.y
+      childSize=ch
+      parentSize=ph
+      wh='height'
+      xy='y'
     }
-    const wh=parent.getWH()
-    panel.size=percentSize
-    panel.domElement.style[wh]=percentSize+'%'
-    const brother=panel.getBrother()
-    if(brother){
-      brother.size=100-percentSize
-      brother.domElement.style[wh]=brother.size+'%'
+    const minSize=0
+    const maxSize=parentSize-minSize
+    const size=childSize+dragDist[xy]
+    if(size>minSize&&size<maxSize){
+      const percentSize=100*size/parentSize;
+      panel.size=percentSize
+      panel.domElement.style[wh]=percentSize+'%'
+      splitLine.position[xy]+=dragDist[xy]
+      const brother=panel.getBrother()
+      if(brother){
+        brother.size=100-percentSize
+        brother.domElement.style[wh]=brother.size+'%'
+      }
     }
   }
 }

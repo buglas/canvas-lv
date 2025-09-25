@@ -1,16 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Scene } from '../lmm/core/Scene'
-import { StandStyle } from '../lmm/style/StandStyle'
-import { Graph2D } from '../lmm/objects/Graph2D'
-import { CircleGeometry } from '../lmm/geometry/CircleGeometry'
-import { RectGeometry } from '../lmm/geometry/RectGeometry'
-import { PolyGeometry } from '../lmm/geometry/PolyGeometry'
-import { TextGraph2D } from '../lmm/objects/TextGraph2D'
-import { TextStyle } from '../lmm/style/TextStyle'
-import { Vector2 } from '../lmm/math/Vector2'
-import { ImageGraph2D } from '../lmm/objects/ImageGraph2D'
-import { Panel, PanelController, PanelDomCreator, PanelWrapper } from '../component/PanelControler'
+import { Panel, PanelController, PanelDomCreator, PanelWrapper } from '../utils/PanelController'
 
 // 获取父级属性
 defineProps({
@@ -86,6 +76,7 @@ onMounted(() => {
 #cont{
 margin:32px auto;
 width: 600px;
+overflow: hidden;
 }
 #btns{
   padding-bottom: 2px;
