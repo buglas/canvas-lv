@@ -1,10 +1,10 @@
-import { Vector2 } from '../lmm/math/Vector2'
-import { Group } from '../lmm/objects/Group'
-import { RectGeometry } from '../lmm/geometry/RectGeometry'
-import { TextGraph2D } from '../lmm/objects/TextGraph2D'
-import {Graph2D} from '../lmm/objects/Graph2D'
-import { StandStyle } from '../lmm/style/StandStyle'
-import { TextStyle } from '../lmm/style/TextStyle'
+import { Vector2 } from '../../lmm/math/Vector2'
+import { Group } from '../../lmm/objects/Group'
+import { RectGeometry } from '../../lmm/geometry/RectGeometry'
+import { TextGraph2D } from '../../lmm/objects/TextGraph2D'
+import {Graph2D} from '../../lmm/objects/Graph2D'
+import { StandStyle } from '../../lmm/style/StandStyle'
+import { TextStyle } from '../../lmm/style/TextStyle'
 
 type LatticeType = {
 	text?: string | number

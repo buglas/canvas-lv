@@ -1,8 +1,8 @@
-import { StandStyle } from "../lmm/style/StandStyle"
-import { Graph2D } from "../lmm/objects/Graph2D"
-import { Group } from "../lmm/objects/Group"
-import { PolyGeometry } from "../lmm/geometry/PolyGeometry"
-import { BasicScene } from "../lmm/core/BasicScene"
+import { StandStyle } from "../../lmm/style/StandStyle"
+import { Graph2D } from "../../lmm/objects/Graph2D"
+import { Group } from "../../lmm/objects/Group"
+import { PolyGeometry } from "../../lmm/geometry/PolyGeometry"
+import { BasicScene } from "../../lmm/core/BasicScene"
 const n=6
 class RobotMap{
   // scene 场景对象

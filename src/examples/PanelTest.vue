@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Panel, PanelController, PanelDomCreator, PanelWrapper } from '../utils/PanelController'
+import { Panel, PanelController, PanelDomCreator, PanelWrapper } from './jsm/PanelController'
 
 // 获取父级属性
 defineProps({

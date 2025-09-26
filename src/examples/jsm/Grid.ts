@@ -1,8 +1,8 @@
-import { Vector2 } from '../lmm/math/Vector2'
-import { Graph2D } from '../lmm/objects/Graph2D'
-import { GeometryGroup } from '../lmm/geometry/GeometryGroup'
-import { StandStyle } from '../lmm/style/StandStyle'
-import { PolyGeometry } from '../lmm/geometry/PolyGeometry'
+import { Vector2 } from '../../lmm/math/Vector2'
+import { Graph2D } from '../../lmm/objects/Graph2D'
+import { GeometryGroup } from '../../lmm/geometry/GeometryGroup'
+import { StandStyle } from '../../lmm/style/StandStyle'
+import { PolyGeometry } from '../../lmm/geometry/PolyGeometry'
 
 class Grid extends Graph2D<GeometryGroup,StandStyle> {
 	size:Vector2

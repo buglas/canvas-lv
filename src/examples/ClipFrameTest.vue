@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { CropTool } from '../utils/CropTool'
+import { CropTool } from './jsm/CropTool'
 
 // canvas 容器
 const canvasWrapperRef = ref<HTMLDivElement>()

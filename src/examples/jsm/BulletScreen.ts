@@ -1,6 +1,6 @@
-import { Scene } from "../lmm/core/Scene"
-import { TextGraph2D } from "../lmm/objects/TextGraph2D"
-import { TextStyle } from "../lmm/style/TextStyle"
+import { Scene } from "../../lmm/core/Scene"
+import { TextGraph2D } from "../../lmm/objects/TextGraph2D"
+import { TextStyle } from "../../lmm/style/TextStyle"
 
 type BulletDataType = {
 	// 出现时间

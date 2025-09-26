@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { randChar } from '../utils/Utils'
-import { BulletScreen } from '../utils/BulletScreen'
+import { randChar } from './jsm/Utils'
+import { BulletScreen } from './jsm/BulletScreen'
 
 // 获取父级属性
 defineProps({

@@ -1,10 +1,10 @@
 import { ref } from "vue"
-import { Scene } from "../lmm/core/Scene"
+import { Scene } from "../../lmm/core/Scene"
 import { CropFrame } from "./CropFrame"
-import { Graph2D } from "../lmm/objects/Graph2D"
-import { RectGeometry } from "../lmm/geometry/RectGeometry"
-import { StandStyle } from "../lmm/style/StandStyle"
-import { BasicScene } from "../lmm/core/BasicScene"
+import { Graph2D } from "../../lmm/objects/Graph2D"
+import { RectGeometry } from "../../lmm/geometry/RectGeometry"
+import { StandStyle } from "../../lmm/style/StandStyle"
+import { BasicScene } from "../../lmm/core/BasicScene"
 
 class CropTool{
   // canvas 容器

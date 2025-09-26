@@ -1,13 +1,13 @@
-import { BasicScene } from "../lmm/core/BasicScene"
-import { Object2D } from "../lmm/core/Object2D"
-import { Geometry } from "../lmm/geometry/Geometry"
-import { PolyGeometry } from "../lmm/geometry/PolyGeometry"
-import { RectGeometry } from "../lmm/geometry/RectGeometry"
-import {generateUUID} from "../lmm/math/MathUtils"
-import { Vector2 } from "../lmm/math/Vector2"
-import { Graph2D } from "../lmm/objects/Graph2D"
-import { Group } from "../lmm/objects/Group"
-import { StandStyle } from "../lmm/style/StandStyle"
+import { BasicScene } from "../../lmm/core/BasicScene"
+import { Object2D } from "../../lmm/core/Object2D"
+import { Geometry } from "../../lmm/geometry/Geometry"
+import { PolyGeometry } from "../../lmm/geometry/PolyGeometry"
+import { RectGeometry } from "../../lmm/geometry/RectGeometry"
+import {generateUUID} from "../../lmm/math/MathUtils"
+import { Vector2 } from "../../lmm/math/Vector2"
+import { Graph2D } from "../../lmm/objects/Graph2D"
+import { Group } from "../../lmm/objects/Group"
+import { StandStyle } from "../../lmm/style/StandStyle"
 import { DomCreator } from "./DomCreator"
 
 type DirectionType='row'|'column'
@@ -448,7 +448,7 @@ class PanelController{
     new StandStyle({
       strokeStyle:'rgba(0,0,0,0.8)',
       lineWidth:1,
-      lineDash:[5,3]
+      lineDash:[]
     })
   )
   dragStart=new Vector2()
@@ -466,7 +466,7 @@ class PanelController{
     canvas.style.top='0'
     canvas.style.left='0'
     canvas.style.pointerEvents='none'
-    canvas.style.backgroundColor='rgba(0,0,255,0.01)'
+    // canvas.style.backgroundColor='rgba(0,0,255,0.01)'
     domElement.appendChild(canvas)
 
     hotZones.name='hotZones'
@@ -520,8 +520,10 @@ class PanelController{
         dragStart.copy(panelTreeMask.pageToCanvas(pageX,pageY))
         if(this.currentHoverLine){
           this.panelControlState='startStretch'
+          splitLine.style.lineDash=[5,3]
         }
       }
+      panelTreeMask.render()
     })
     domElement.addEventListener('mousemove',({buttons,pageX,pageY })=>{
       const worldPosition=panelTreeMask.pageToWorld(pageX,pageY);
@@ -615,13 +617,15 @@ class PanelController{
       this.currentMousedownUUID=undefined
       this.currentDragPanel=undefined
       this.currentHotZone=undefined
-      this.currentHoverLine=undefined
+      // this.currentHoverLine=undefined
       splitArea.visible=false
       floatShape.visible=false
-      splitLine.visible=false
-      floatShape.position=new Vector2()
-      splitLine.position=new Vector2()
+      // splitLine.visible=false
+      splitLine.style.lineDash=[]
       panelTreeMask.render()
+      splitLine.position=new Vector2()
+      floatShape.position=new Vector2()
+      console.log('splitLine.visible',splitLine.visible);
     })
   }
   updateCursor(){
@@ -697,7 +701,7 @@ class PanelController{
         })
       }
     })
-    panelTreeMask.render()
+    // panelTreeMask.render()
     function getPanelBoundingBox(panel:Panel){
       const panelBound=panel.domElement.getBoundingClientRect()
       const {width,height}=panelBound
@@ -767,7 +771,7 @@ class PanelController{
       return
     }
     const {dragDist,splitLine}=this
-    let percentSize,xy:'x'|'y',childSize,parentSize,wh:'width'|'height';
+    let xy:'x'|'y',childSize,parentSize,wh:'width'|'height';
     const {domElement:{clientWidth:pw,clientHeight:ph}}=parent
     const {domElement:{offsetWidth:cw,offsetHeight:ch}}=panel
     
@@ -782,7 +786,7 @@ class PanelController{
       wh='height'
       xy='y'
     }
-    const minSize=0
+    const minSize=30
     const maxSize=parentSize-minSize
     const size=childSize+dragDist[xy]
     if(size>minSize&&size<maxSize){
@@ -795,6 +799,14 @@ class PanelController{
         brother.size=100-percentSize
         brother.domElement.style[wh]=brother.size+'%'
       }
+    }else{
+      this.panelControlState=undefined
+      this.splitLine.visible=false
+      splitLine.style.lineDash=[]
+      splitLine.position=new Vector2()
+      this.currentHoverLine=undefined
+      this.hoverState=undefined
+      this.updateHotZone()
     }
   }
 }

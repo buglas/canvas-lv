@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import map from '/src/assets/map.jpg'
-import { RobotMap } from '../utils/RobotMap'
+import { RobotMap } from './jsm/RobotMap'
 import { cvsData } from './dataLib/MapData'
 import {Euler, Quaternion} from 'three'
 const odomData=cvsData['odom_slam.csv'] as any
