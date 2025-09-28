@@ -453,10 +453,12 @@ class PanelController{
   )
   dragStart=new Vector2()
   dragDist=new Vector2()
+  dragStartPos=new Vector2()
+  dragEndPos=new Vector2()
   panelContResizeObserver:ResizeObserver
   hoverState:HoverStateType
   constructor(){
-    const {domElement,panelDomCreator,panelTree,panelTreeMask,panelTreeMask:{canvas},hotZones,floatShape,dragStart,dragDist,splitArea,hotLines,splitLine}=this
+    const {domElement,panelDomCreator,panelTree,panelTreeMask,panelTreeMask:{canvas},hotZones,floatShape,dragStart,dragDist,splitArea,hotLines,splitLine,dragStartPos,dragEndPos}=this
     domElement.style.position='relative'
     domElement.style.width='100%'
     domElement.style.height='100%'
@@ -497,6 +499,7 @@ class PanelController{
     panelDomCreator.onTitleMouseDown=({pageX,pageY },uuid)=>{
       if(this.panelControlState){return}
       dragStart.copy(panelTreeMask.pageToCanvas(pageX,pageY))
+      dragStartPos.copy(panelTreeMask.pageToCanvas(pageX,pageY))
       this.currentMousedownUUID=uuid
       this.panelControlState='startDrag'
       const panel=panelTree.getChildByUUID(uuid)
@@ -518,6 +521,7 @@ class PanelController{
     domElement.addEventListener('mousedown',({button,pageX,pageY })=>{
       if(button==0 ){
         dragStart.copy(panelTreeMask.pageToCanvas(pageX,pageY))
+        dragStartPos.copy(panelTreeMask.pageToCanvas(pageX,pageY))
         if(this.currentHoverLine){
           this.panelControlState='startStretch'
           splitLine.style.lineDash=[5,3]
@@ -526,9 +530,10 @@ class PanelController{
       panelTreeMask.render()
     })
     domElement.addEventListener('mousemove',({buttons,pageX,pageY })=>{
-      const worldPosition=panelTreeMask.pageToWorld(pageX,pageY);
+      const worldPosition=panelTreeMask.pageToCanvas(pageX,pageY);
       if(buttons==1){
-        const dragEnd=panelTreeMask.pageToCanvas(pageX,pageY)
+        const dragEnd=worldPosition.clone()
+        dragEndPos.copy(worldPosition)
         dragDist.copy(dragEnd.clone().sub(dragStart))
         if(this.panelControlState=='startDrag'){
           this.panelControlState='dragging'
@@ -573,8 +578,8 @@ class PanelController{
           if(!currentHoverLine){
             console.warn('currentHoverLine 丢失')
           }else{
-            const {userData:{panel}}=currentHoverLine;
-            this.stretchPanel(panel)
+            const {userData:{panel,parentSize,childSize}}=currentHoverLine;
+            this.stretchPanel(panel,parentSize,childSize)
           }
         }
         this.moveFloatPanel()
@@ -625,7 +630,7 @@ class PanelController{
       panelTreeMask.render()
       splitLine.position=new Vector2()
       floatShape.position=new Vector2()
-      console.log('splitLine.visible',splitLine.visible);
+      dragStartPos.set(0)
     })
   }
   updateCursor(){
@@ -665,7 +670,26 @@ class PanelController{
           new PolyGeometry(linePoints),
           new StandStyle({strokeStyle:'rgba(255,0,0,0)',lineWidth:12})
         )
-        const userData:{panel:Panel}={panel:children[0]}
+        const childPanel=children[0];
+        const {domElement:{clientWidth:pw,clientHeight:ph}}=panel
+        const {domElement:{offsetWidth:cw,offsetHeight:ch}}=childPanel
+        let parentSize,childSize;
+        if(direction=='column'){
+          parentSize=ph
+          childSize=ch
+        }else{
+          parentSize=pw
+          childSize=cw
+        }
+        const userData:{
+          panel:Panel,
+          parentSize:number
+          childSize:number
+        }={
+          parentSize,
+          childSize,
+          panel:childPanel
+        }
         lineObj.userData=userData
         hotLines.add(lineObj)
       }else{
@@ -753,9 +777,13 @@ class PanelController{
       panelBound.height*scale
     )
   }
+  getDragDist(){
+    const {dragStartPos,dragEndPos}=this
+    return dragEndPos.clone().sub(dragStartPos)
+  }
   moveFloatPanel(){
-    const {dragDist,floatShape}=this
-    floatShape.position.add(dragDist)
+    const {floatShape}=this
+    floatShape.position.copy(this.getDragDist())
   }
   observerPanelContResize(){
     const {domElement,panelContResizeObserver}=this
@@ -764,25 +792,26 @@ class PanelController{
       panelContResizeObserver.observe(ele);
     })
   }
-  stretchPanel(panel:Panel){
+  stretchPanel(panel:Panel,parentSize:number,childSize:number){
     const {parent}=panel
     if(!parent){
       console.warn('根元素不可拉伸！')
       return
     }
-    const {dragDist,splitLine}=this
-    let xy:'x'|'y',childSize,parentSize,wh:'width'|'height';
+    const {splitLine}=this
+    const dragDist=this.getDragDist()
+    let xy:'x'|'y',wh:'width'|'height';
     const {domElement:{clientWidth:pw,clientHeight:ph}}=parent
     const {domElement:{offsetWidth:cw,offsetHeight:ch}}=panel
     
     if(parent.direction=='row'){
-      childSize=cw
-      parentSize=pw
+      // childSize=cw
+      // parentSize=pw
       wh='width'
       xy='x'
     }else{
-      childSize=ch
-      parentSize=ph
+      // childSize=ch
+      // parentSize=ph
       wh='height'
       xy='y'
     }
@@ -793,20 +822,20 @@ class PanelController{
       const percentSize=100*size/parentSize;
       panel.size=percentSize
       panel.domElement.style[wh]=percentSize+'%'
-      splitLine.position[xy]+=dragDist[xy]
+      splitLine.position[xy]=dragDist[xy]
       const brother=panel.getBrother()
       if(brother){
         brother.size=100-percentSize
         brother.domElement.style[wh]=brother.size+'%'
       }
     }else{
-      this.panelControlState=undefined
-      this.splitLine.visible=false
-      splitLine.style.lineDash=[]
-      splitLine.position=new Vector2()
-      this.currentHoverLine=undefined
-      this.hoverState=undefined
-      this.updateHotZone()
+      // this.panelControlState=undefined
+      // this.splitLine.visible=false
+      // splitLine.style.lineDash=[]
+      // splitLine.position=new Vector2()
+      // this.currentHoverLine=undefined
+      // this.hoverState=undefined
+      // this.updateHotZone()
     }
   }
 }

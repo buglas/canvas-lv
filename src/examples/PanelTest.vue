@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUpdated } from 'vue'
 import { Panel, PanelController, PanelDomCreator, PanelWrapper } from './jsm/PanelController'
 
 // 获取父级属性
@@ -55,7 +55,12 @@ function pushPanel(){
   panelController.pushPanel()
 }
 
+onUpdated(()=>{
+  console.log('onUpdated');
+})
+
 onMounted(() => {
+  console.log('onMounted');
 	const {value:panelsCont}=panelsContRef
   if(!panelsCont){return}
   panelController.appendDomElementTo(panelsCont)
