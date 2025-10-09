@@ -20,13 +20,14 @@ type PanelOptionType = {
 	size?: number
 	parentDirection?: DirectionType
 }
-type PanelType = 'Image' | '3D'
+export type PanelType = 'Image' | '3D'
 class Panel {
 	uuid: string = generateUUID()
 	type: PanelType = 'Image'
 	class = 'lv-robot-panel'
 	size: number = 100
 	parent?: PanelWrapper
+  userData:{[k:string]:any}={}
 	constructor(option: PanelOptionType = {}) {
 		this.init(option)
 	}
@@ -59,15 +60,8 @@ class Panel {
 		return { width, height }
 	}
 	init(option: PanelOptionType = {}) {
-		const {size,type} = option
-		// const { style } = domElement
-		// domElement.setAttribute('data-uuid', this.uuid)
-		// this.class&&domElement.classList.add(this.class)
-		// style.width = '100%'
-		// style.height = '100%'
-		// this.domElement = domElement
-		// this.setSize(size, parentDirection)
-		this.setSize(size)
+		const {size=100,type} = option
+		this.size = size
 		type && (this.type = type)
 	}
 	addPanel(
@@ -115,10 +109,12 @@ class Panel {
 		}
 		return ind
 	}
-	setSize(size: number = 100, parentDirection?: DirectionType) {
+	setSize(size: number = 100) {
 		this.size = size
-		// let wh = this.getParentWH(parentDirection)
-		// this.domElement.style[wh] = size + '%'
+    const brother = this.getBrother()
+    if (brother) {
+      brother.size = 100 - size
+    }
 	}
 	getParentWH(parentDirection?: DirectionType) {
 		const { parent } = this
@@ -153,9 +149,13 @@ class Panel {
 			}
 		}
 	}
+  traverseParent(fn: (panel: Panel) => void){
+    const {parent}=this
+    fn(this)
+    parent&&parent.traverseParent(fn)
+  }
 	remove() {
 		const {parent } = this
-		// domElement.remove()
 		const ind = this.getIndexOfParent()
 		if (!parent || ind == undefined) {
 			return
@@ -260,7 +260,6 @@ class PanelWrapper extends Panel {
 	}
 	setDirection(dir: DirectionType = 'row') {
 		this.direction = dir
-		// this.domElement.style.flexDirection = dir
 	}
 	addPanel(
 		panel: Panel,
@@ -287,16 +286,11 @@ class PanelWrapper extends Panel {
 		objs.forEach((obj) => {
 			children.push(obj)
 			obj.parent = this
-			// domElement.appendChild(obj.domElement)
 		})
 	}
 	// firstPanelSize 百分比*100
 	updateSize(firstPanelSize?: number) {
 		const { children } = this
-		// children.forEach(({ domElement: { style } }) => {
-		// 	style.width = '100%'
-		// 	style.height = '100%'
-		// })
 		if (firstPanelSize == undefined) {
 			if (children.length == 1) {
 				children[0].setSize(100)
@@ -313,28 +307,6 @@ class PanelWrapper extends Panel {
 			}
 		}
 	}
-	// formatSize() {
-	// 	const { children } = this
-	// 	// children.forEach(({ domElement: { style } }) => {
-	// 	// 	style.width = '100%'
-	// 	// 	style.height = '100%'
-	// 	// })
-	// 	if (children.length == 1) {
-	// 		children[0].setSize(100)
-	// 		if (children[0] instanceof PanelWrapper) {
-	// 			children[0].formatSize()
-	// 		}
-	// 	} else if (children.length == 2) {
-	// 		children[0].setSize(children[0].size)
-	// 		children[1].setSize(100 - children[0].size)
-	// 		if (children[0] instanceof PanelWrapper) {
-	// 			children[0].formatSize()
-	// 		}
-	// 		if (children[1] instanceof PanelWrapper) {
-	// 			children[1].formatSize()
-	// 		}
-	// 	}
-	// }
 	// size 像素单位,转百分比
 	getPercentage(size: number) {
 		return (size / this.getClientSize()) * 100
@@ -374,6 +346,15 @@ class PanelWrapper extends Panel {
 			}
 		}
 	}
+  getPanelByUUID(uuid:string){
+    let panel:Panel|undefined
+    this.traversePanel((ele)=>{
+      if(uuid==ele.uuid){
+        panel=ele
+      }
+    })
+    return panel
+  }
 }
 
 class PanelDomCreator extends DomCreator {
@@ -459,7 +440,8 @@ const hotZoneTypes: {
 		order: 'unshift',
 	},
 ]
-// PanelController 再开一个rootDom，position: relative;包含panel和canvas
+const splitLineHoverColor=''
+const splitLineDefaultColor=''
 class PanelController {
 	domElement = document.createElement('div')
 	panelDomCreator = new PanelDomCreator()
@@ -493,8 +475,8 @@ class PanelController {
 	splitLine: Graph2D<PolyGeometry, StandStyle> = new Graph2D(
 		new PolyGeometry(),
 		new StandStyle({
-			strokeStyle: 'rgba(0,0,0,0.8)',
-			lineWidth: 1,
+			strokeStyle: 'rgba(4, 0, 255, 0.8)',
+			lineWidth: 2,
 			lineDash: [],
 		})
 	)
@@ -502,9 +484,9 @@ class PanelController {
 	dragEndPos = new Vector2()
 	panelContResizeObserver: ResizeObserver
 	hoverState: HoverStateType
+  fullPanel:Panel|undefined
 	constructor() {
 		const {
-			domElement,
 			panelTreeMask,
 			panelTreeMask: { canvas },
 			hotZones,
@@ -514,17 +496,11 @@ class PanelController {
 			splitLine,
 			dragStartPos,
 		} = this
-		domElement.style.position = 'relative'
-		domElement.style.width = '100%'
-		domElement.style.height = '100%'
-		// domElement.appendChild(panelTree.domElement)
-
 		canvas.style.position = 'absolute'
 		canvas.style.top = '0'
 		canvas.style.left = '0'
 		canvas.style.pointerEvents = 'none'
 		// canvas.style.backgroundColor='rgba(0,0,255,0.1)'
-		// domElement.appendChild(canvas)
 
 		hotZones.name = 'hotZones'
 		panelTreeMask.add(hotZones)
@@ -550,130 +526,6 @@ class PanelController {
 				// console.log(`尺寸变化: `, entry.contentRect);
 			})
 		})
-
-		// panelDomCreator.onTitleMouseDown=({pageX,pageY },uuid)=>{
-		//   if(this.panelControlState){return}
-		//   dragStartPos.copy(panelTreeMask.pageToCanvas(pageX,pageY))
-		//   this.currentMousedownUUID=uuid
-		//   this.panelControlState='startDrag'
-		//   const panel=panelTree.getChildByUUID(uuid)
-		//   panel&&this.updateFloatPanelGeometry(panel)
-		// }
-		// panelDomCreator.onTitleMouseMove=()=>{
-		//   // console.log('onTitleMouseMove');
-		//   // console.log('this.hoverState',this.hoverState);
-		//   if(!this.hoverState){
-		//     this.hoverState='readyDrag'
-		//   }
-		// }
-		// panelDomCreator.onTitleMouseLeave=()=>{
-		//   // console.log('onTitleMouseLeave');
-		//   if(this.hoverState=='readyDrag'){
-		//     this.hoverState=undefined
-		//   }
-		// }
-		// canvas.addEventListener('mousedown', ({ button, pageX, pageY }) => {
-		// 	if (button == 0) {
-		// 		dragStartPos.copy(panelTreeMask.pageToCanvas(pageX, pageY))
-		// 		if (this.currentHoverLine) {
-		// 			this.panelControlState = 'startStretch'
-		// 			splitLine.style.lineDash = [5, 3]
-		// 		}
-		// 	}
-		// 	panelTreeMask.render()
-		// })
-		// canvas.addEventListener(
-		// 	'mousemove',
-		// 	({ buttons, pageX, pageY, currentTarget }) => {
-		// 		const worldPosition = panelTreeMask.pageToCanvas(pageX, pageY)
-		// 		if (buttons == 1) {
-		// 			dragEndPos.copy(worldPosition)
-		// 			if (this.panelControlState == 'startDrag') {
-		// 				this.panelControlState = 'dragging'
-		// 				if (this.currentMousedownUUID == undefined) {
-		// 					console.warn('currentMousedownUUID 丢失')
-		// 				} else {
-		// 					const target = panelTree.getChildByUUID(this.currentMousedownUUID)
-		// 					if (target) {
-		// 						this.currentDragPanel = target
-		// 						splitArea.visible = true
-		// 						floatShape.visible = true
-		// 						target.remove()
-		// 						this.updateHotZone()
-		// 					} else {
-		// 						console.warn('没有找到拖拽目标')
-		// 					}
-		// 				}
-		// 			} else if (this.panelControlState == 'startStretch') {
-		// 				this.updateHotZone()
-		// 				this.panelControlState = 'stretching'
-		// 			}
-		// 			if (this.panelControlState == 'dragging') {
-		// 				let isPointInHotZone = false
-		// 				for (let hotZone of hotZones.children) {
-		// 					if (!(hotZone instanceof Graph2D)) {
-		// 						continue
-		// 					}
-		// 					if (hotZone.isPointIn(worldPosition)) {
-		// 						if (this.currentHotZone != hotZone) {
-		// 							this.currentHotZone = hotZone
-		// 							const {
-		// 								userData: { splitRectPoints },
-		// 							} = hotZone
-		// 							if (splitRectPoints && splitRectPoints instanceof Array) {
-		// 								splitArea.geometry.position = splitRectPoints
-		// 							}
-		// 						}
-		// 						isPointInHotZone = true
-		// 						break
-		// 					}
-		// 				}
-		// 				!isPointInHotZone && (this.currentHotZone = undefined)
-		// 			} else if (this.panelControlState == 'stretching') {
-		// 				// 拉伸panel，位移splitLine
-		// 				const { currentHoverLine } = this
-		// 				if (!currentHoverLine) {
-		// 					console.warn('currentHoverLine 丢失')
-		// 				} else {
-		// 					const {
-		// 						userData: { panel, parentSize, childSize },
-		// 					} = currentHoverLine
-		// 					this.stretchPanel(panel, parentSize, childSize)
-		// 				}
-		// 			}
-		// 			this.moveFloatPanel()
-		// 		} else {
-		// 			let isHover = false
-		// 			for (let hotLine of hotLines.children) {
-		// 				if (!(hotLine instanceof Graph2D)) {
-		// 					continue
-		// 				}
-		// 				if (hotLine.isPointInStroke(worldPosition)) {
-		// 					if (this.currentHoverLine != hotLine) {
-		// 						this.currentHoverLine = hotLine as Graph2D<
-		// 							PolyGeometry,
-		// 							StandStyle
-		// 						>
-		// 						splitLine.visible = true
-		// 						splitLine.geometry = hotLine.geometry
-		// 					}
-		// 					isHover = true
-		// 					this.hoverState = 'readyStretch'
-		// 					break
-		// 				}
-		// 			}
-		// 			if (!isHover) {
-		// 				this.currentHoverLine = undefined
-		// 				splitLine.visible = false
-		// 				if (this.hoverState == 'readyStretch') {
-		// 					this.hoverState = undefined
-		// 				}
-		// 			}
-		// 		}
-		// 		this.updateCursor(currentTarget as HTMLElement)
-		// 		panelTreeMask.render()
-		// 	}
-		// )
 		window.addEventListener('mouseup', () => {
 			if (this.currentHotZone) {
 				const {
@@ -681,17 +533,12 @@ class PanelController {
 				} = this.currentHotZone as any
 				panel.addPanel(this.currentDragPanel, direction, order)
 			}
-			// if (this.panelControlState) {
-			// 	this.updateHotZone()
-			// }
 			this.panelControlState = undefined
 			this.currentMousedownUUID = undefined
 			this.currentDragPanel = undefined
 			this.currentHotZone = undefined
-			// this.currentHoverLine=undefined
 			splitArea.visible = false
 			floatShape.visible = false
-			// splitLine.visible=false
 			splitLine.style.lineDash = []
 			panelTreeMask.render()
 			splitLine.position = new Vector2()
@@ -701,6 +548,12 @@ class PanelController {
 	}
   setDomElement(domElement:HTMLDivElement){
     this.domElement=domElement
+    domElement.addEventListener('mousedown',(event: MouseEvent)=>{
+      this.totalMousedown(event)
+    })
+    domElement.addEventListener('mousemove',(event: MouseEvent)=>{
+      this.totalMousemove(event)
+    })
     this.appendMask()
     this.updateHotZone()
   }
@@ -752,6 +605,7 @@ class PanelController {
 			dragStartPos.copy(panelTreeMask.pageToCanvas(pageX, pageY))
 			if (this.currentHoverLine) {
 				this.panelControlState = 'startStretch'
+        splitLine.style.strokeStyle='#000'
 				splitLine.style.lineDash = [5, 3]
 			}
 		}
@@ -838,6 +692,7 @@ class PanelController {
 					if (this.currentHoverLine != hotLine) {
 						this.currentHoverLine = hotLine as Graph2D<PolyGeometry, StandStyle>
 						splitLine.visible = true
+            splitLine.style.strokeStyle='rgba(4, 0, 255, 0.8)'
 						splitLine.geometry = hotLine.geometry
 					}
 					isHover = true
@@ -981,7 +836,7 @@ class PanelController {
 			return { minX, minY, maxX, maxY, width, height }
 		}
 	}
-	pushPanel(type: PanelType = '3D', direction: DirectionType = 'row') {
+	/* pushPanel(type: PanelType = '3D', direction: DirectionType = 'row') {
 		const { panelDomCreator, panelTreeRef:{value:panelTree}, } = this
 		const panel = new Panel({
 			domElement: panelDomCreator.create(type),
@@ -989,7 +844,62 @@ class PanelController {
 		const lastPanel = panelTree.getLast()
 		lastPanel.addPanel(panel, direction)
 		this.updateHotZone()
-	}
+	} */
+  split(uuid:string,type:PanelType,direction:DirectionType){
+    const { panelTreeRef:{value:panelTree}} = this
+    const panel=panelTree.getPanelByUUID(uuid)
+    if(!panel){
+      console.warn('split: 没有找到panel ')
+      return
+    }
+    const newPanel=new Panel({type})
+    panel.addPanel(newPanel,direction,'push')
+  }
+  fullToggle(uuid:string){
+    const {panelTreeRef:{value:panelTree}}=this
+    let {fullPanel}=this
+    let isFull=false
+    if(fullPanel){
+      fullPanel.traverseParent((panel)=>{
+        if(!panel.parent){return}
+        const {userData:{oldSize}}=panel
+        if(oldSize==undefined){
+          console.warn('fullToggle: oldSize 未定义')
+        }else{
+          panel.setSize(oldSize)
+        }
+        panel.userData.oldSize=undefined
+      })
+      this.fullPanel=undefined
+      if(fullPanel.uuid!=uuid){
+        this.fullToggle(uuid)
+      }
+    }else{
+      fullPanel=panelTree.getPanelByUUID(uuid)
+      if(!fullPanel){
+        console.warn('fullToggle: 无法根据uuid 找到Panel')
+        return
+      }
+      this.fullPanel=fullPanel
+      fullPanel.traverseParent((panel)=>{
+        if(!panel.parent){return}
+        console.log('panel.parent',panel.parent);
+        panel.userData.oldSize=panel.size
+        panel.setSize(100)
+      })
+      isFull=true
+    }
+    return isFull
+  }
+  deletePanel(uuid:string){
+    const {panelTreeRef:{value:panelTree}}=this
+    const panel=panelTree.getPanelByUUID(uuid)
+    if(!panel){
+      console.warn('deletePanel: 无法根据uuid 找到Panel')
+      return
+    }
+    panel.remove()
+  }
 	setPanelTreeOption(option: PanelWrapperOptionType | PanelOptionType) {
 		const {
 			panelTreeRef:{value:panelTree},
@@ -1077,22 +987,8 @@ class PanelController {
 		const size = childSize + dragDist[xy]
 		if (size > minSize && size < maxSize) {
 			const percentSize = (100 * size) / parentSize
-			panel.size = percentSize
-			panel.domElement.style[wh] = percentSize + '%'
+			panel.setSize(percentSize)
 			splitLine.position[xy] = dragDist[xy]
-			const brother = panel.getBrother()
-			if (brother) {
-				brother.size = 100 - percentSize
-				brother.domElement.style[wh] = brother.size + '%'
-			}
-		} else {
-			// this.panelControlState=undefined
-			// this.splitLine.visible=false
-			// splitLine.style.lineDash=[]
-			// splitLine.position=new Vector2()
-			// this.currentHoverLine=undefined
-			// this.hoverState=undefined
-			// this.updateHotZone()
 		}
 	}
 	destroy() {

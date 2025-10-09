@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUpdated, onUnmounted } from 'vue'
-import { Panel, PanelController, PanelDomCreator, PanelWrapper } from './jsm/PanelController'
+import { Panel, PanelController, PanelDomCreator, PanelType, PanelWrapper } from './jsm/PanelController'
 import PanelTree from './components/PanelTree.vue'
 
 // 获取父级属性
@@ -27,46 +27,39 @@ panelController.setPanelTreeOption({
   ]
 })
 
-
-// function pushPanel(){
-//   console.log('pushPanel');
-//   panelController.pushPanel()
-// }
-
-// onUpdated(()=>{
-//   console.log('onUpdated');
-// })
-
-
-const totalMousedown = (event:MouseEvent) => {
-  // console.log('totalMousedown')
-  panelController.totalMousedown(event)
-}
-const totalMousemove = (event:MouseEvent) => {
-  // console.log('totalMousemove')
-  panelController.totalMousemove(event)
-}
 const titleMousedown = (event:MouseEvent) => {
-  // console.log('titleMousedown')
   panelController.titleMouseDown(event)
 }
 const titleMousemove = (event:MouseEvent) => {
-  // console.log('titleMousemove')
   panelController.titleMousemove(event)
 }
 const titleMouseleave = (event:MouseEvent) => {
-  // console.log('titleMouseleave')
   panelController.titleMouseleave(event)
 }
 const panelUpdated=()=>{
   panelController.updateHotZone()
+}
+const splitRight = (uuid:string,type:PanelType) => {
+  console.log('splitRight',uuid);
+  panelController.split(uuid,'Image','row')
+}
+const splitDown = (uuid:string,type:PanelType) => {
+  console.log('splitDown',uuid);
+  panelController.split(uuid,'3D','column')
+}
+const fullToggle = (uuid:string) => {
+  console.log('fullToggle',uuid);
+  panelController.fullToggle(uuid)
+}
+const deletePanel = (uuid:string) => {
+  console.log('deletePanel',uuid);
+  panelController.deletePanel(uuid)
 }
 
 onUpdated(()=>{
   panelUpdated()
 })
 onMounted(() => {
-  console.log('onMounted');
 	const {value:panels}=panelsRef
   if(!panels){return}
   panelController.setDomElement(panels)
@@ -78,25 +71,19 @@ onUnmounted(()=>{
 
 <template>
   <div id="cont">
-    <div id="btns">
-      <button @click="">pushPanel</button>
-    </div>
-	  <!-- <div id="panelsCont" ref="panelsContRef"></div> -->
-    <div 
-      id="panelsCont" 
-      ref="panelsRef"
-      @mousedown="totalMousedown"
-      @mousemove="totalMousemove"
-    >
+    <div id="panelsCont" ref="panelsRef">
       <PanelTree 
         :node="panelTreeRef"
         @titleMousedown="titleMousedown"
         @titleMousemove="titleMousemove"
         @titleMouseleave="titleMouseleave"
         @panelUpdated="panelUpdated"
+        @splitRight="splitRight"
+        @splitDown="splitDown"
+        @fullToggle="fullToggle"
+        @deletePanel="deletePanel"
       ></PanelTree>
     </div>
-    
   </div>
 </template>
 

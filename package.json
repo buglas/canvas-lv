@@ -10,6 +10,7 @@
 		"test": "vitest --root src"
 	},
 	"dependencies": {
+		"@element-plus/icons-vue": "^2.3.2",
 		"@types/dat.gui": "^0.7.7",
 		"@types/three": "^0.177.0",
 		"dat.gui": "^0.7.9",

@@ -14,6 +14,10 @@
       @titleMousemove="titleMousemove"
       @titleMouseleave="titleMouseleave"
       @panelUpdated="panelUpdated"
+      @splitRight="splitRight"
+      @splitDown="splitDown"
+      @fullToggle="fullToggle"
+      @deletePanel="deletePanel"
     />
     <template v-else>
       <div 
@@ -22,16 +26,25 @@
         @mousemove="titleMousemove"
         @mouseleave="titleMouseleave"
       >
-        {{ node.type }}
+        <div>{{ node.type }} </div>
+        <div>
+          <span @click="splitRight(node.uuid)" style="cursor: pointer;"> R </span>
+          <span @click="splitDown(node.uuid)" style="cursor: pointer;"> D </span>
+          <span @click="fullToggle(node.uuid)" style="cursor: pointer;"> F </span>
+          <span @click="deletePanel(node.uuid)" style="cursor: pointer;"> Del </span>
+        </div>
+        
       </div>
-      <div class="lv-robot-panel-content"></div>
+      <div class="lv-robot-panel-content">
+        
+      </div>
     </template>
   </div>
 </template>
 
 <script setup>
 import { onUpdated } from 'vue'
-import { PanelController } from '../jsm/PanelController';
+import {ZoomIn} from "@element-plus/icons-vue";
 
 defineProps({
   node: {
@@ -41,7 +54,7 @@ defineProps({
 });
 
 // 定义可以触发的事件
-const emits = defineEmits(['titleMousedown','titleMousemove','titleMouseleave','panelUpdated'])
+const emits = defineEmits(['titleMousedown','titleMousemove','titleMouseleave','panelUpdated','splitRight','splitDown','fullToggle','deletePanel'])
 
 const titleMousedown = (event) => {
   emits('titleMousedown',event)
@@ -54,6 +67,18 @@ const titleMouseleave = (event) => {
 }
 const panelUpdated=()=>{
   emits('panelUpdated')
+}
+const splitRight = (uuid) => {
+  emits('splitRight',uuid,'Image')
+}
+const splitDown = (uuid) => {
+  emits('splitDown',uuid,'3D')
+}
+const fullToggle = (uuid) => {
+  emits('fullToggle',uuid)
+}
+const deletePanel = (uuid) => {
+  emits('deletePanel',uuid)
 }
 
 onUpdated(()=>{
@@ -87,6 +112,14 @@ onUpdated(()=>{
   line-height: 30px;
   vertical-align: middle;
   padding:0 9px;
+  display:flex;
+  justify-content: space-between;
+}
+.lv-robot-panel-title-left{
+
+}
+.lv-robot-panel-title-right{
+
 }
 .lv-robot-panel-content{
   flex:1;
