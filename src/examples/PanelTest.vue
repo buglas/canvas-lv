@@ -1,79 +1,102 @@
 <script setup lang="ts">
-import { ref, onMounted, onUpdated } from 'vue'
+import { ref, onMounted, onUpdated, onUnmounted } from 'vue'
 import { Panel, PanelController, PanelDomCreator, PanelWrapper } from './jsm/PanelController'
+import PanelTree from './components/PanelTree.vue'
 
 // 获取父级属性
 defineProps({
 	size: { type: Object, default: { width: 0, height: 0 } },
 })
+const panelsRef=ref<HTMLDivElement>()
 const panelsContRef=ref<HTMLDivElement>()
 
 const panelController=new PanelController()
-const {panelDomCreator,panelTree}=panelController
-
-// const panelDomCreator=new PanelDomCreator()
-
-// const panelsRootWrapper=new PanelWrapper()
-/* const panel1=new Panel()
-panelsRootWrapper.addPanel(panel1)
-const panel2=new Panel()
-panelsRootWrapper.addPanel(panel2)
-const panel3=new Panel()
-panel2.addPanel(panel3,'column') */
+const {panelDomCreator,panelTreeRef,dragStartPos,dragEndPos,panelTreeMask}=panelController
 
 panelController.setPanelTreeOption({
   direction:'row',
   children:[
-    {
-      size:40,
-      domElement:panelDomCreator.create('3D'),
-    },
+    {size:40,type:'3D'},
     {
       direction:'column',
       children:[
-        {
-          domElement:panelDomCreator.create(),
-          size:40
-        },
-        {
-          children:[
-            {
-              domElement:panelDomCreator.create('3D'),
-            },
-            {
-              domElement:panelDomCreator.create(),
-            }
-          ]
-        }
+        {size:40},
+        { children:[{type:'3D'},{}]}
       ]
     }
   ]
 })
 
-function pushPanel(){
-  console.log('pushPanel');
-  panelController.pushPanel()
+
+// function pushPanel(){
+//   console.log('pushPanel');
+//   panelController.pushPanel()
+// }
+
+// onUpdated(()=>{
+//   console.log('onUpdated');
+// })
+
+
+const totalMousedown = (event:MouseEvent) => {
+  // console.log('totalMousedown')
+  panelController.totalMousedown(event)
+}
+const totalMousemove = (event:MouseEvent) => {
+  // console.log('totalMousemove')
+  panelController.totalMousemove(event)
+}
+const titleMousedown = (event:MouseEvent) => {
+  // console.log('titleMousedown')
+  panelController.titleMouseDown(event)
+}
+const titleMousemove = (event:MouseEvent) => {
+  // console.log('titleMousemove')
+  panelController.titleMousemove(event)
+}
+const titleMouseleave = (event:MouseEvent) => {
+  // console.log('titleMouseleave')
+  panelController.titleMouseleave(event)
+}
+const panelUpdated=()=>{
+  panelController.updateHotZone()
 }
 
 onUpdated(()=>{
-  console.log('onUpdated');
+  panelUpdated()
 })
-
 onMounted(() => {
   console.log('onMounted');
-	const {value:panelsCont}=panelsContRef
-  if(!panelsCont){return}
-  panelController.appendDomElementTo(panelsCont)
+	const {value:panels}=panelsRef
+  if(!panels){return}
+  panelController.setDomElement(panels)
 })
-
+onUnmounted(()=>{
+  panelController.destroy()
+})
 </script>
 
 <template>
   <div id="cont">
     <div id="btns">
-      <button @click="pushPanel">pushPanel</button>
+      <button @click="">pushPanel</button>
     </div>
-	  <div id="panelsCont" ref="panelsContRef"></div>
+	  <!-- <div id="panelsCont" ref="panelsContRef"></div> -->
+    <div 
+      id="panelsCont" 
+      ref="panelsRef"
+      @mousedown="totalMousedown"
+      @mousemove="totalMousemove"
+    >
+      <PanelTree 
+        :node="panelTreeRef"
+        @titleMousedown="titleMousedown"
+        @titleMousemove="titleMousemove"
+        @titleMouseleave="titleMouseleave"
+        @panelUpdated="panelUpdated"
+      ></PanelTree>
+    </div>
+    
   </div>
 </template>
 
@@ -87,6 +110,7 @@ overflow: hidden;
   padding-bottom: 2px;
 }
 #panelsCont{
+  position: relative;
   width: 100%;
   height: 400px;
 }
