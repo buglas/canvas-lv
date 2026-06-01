@@ -3,6 +3,7 @@ import { ref, onMounted, onUpdated, onUnmounted } from 'vue'
 import { Panel, PanelController, PanelDomCreator, PanelType, PanelWrapper } from './jsm/PanelController'
 import PanelTree from './components/PanelTree.vue'
 
+
 // 获取父级属性
 defineProps({
 	size: { type: Object, default: { width: 0, height: 0 } },
@@ -41,11 +42,11 @@ const panelUpdated=()=>{
 }
 const splitRight = (uuid:string,type:PanelType) => {
   console.log('splitRight',uuid);
-  panelController.split(uuid,'Image','row')
+  panelController.split(uuid,type,'row')
 }
 const splitDown = (uuid:string,type:PanelType) => {
   console.log('splitDown',uuid);
-  panelController.split(uuid,'3D','column')
+  panelController.split(uuid,type,'column')
 }
 const fullToggle = (uuid:string) => {
   console.log('fullToggle',uuid);

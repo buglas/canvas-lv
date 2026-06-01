@@ -190,7 +190,6 @@ class PanelWrapper extends Panel {
 	init(option: any = {}) {
 		const { direction = 'row' } = option
 		super.init(option)
-		// this.domElement.style.display = 'flex'
 		this.setDirection(direction)
 	}
 	setOption(option: PanelWrapperOptionType | PanelOptionType) {
@@ -440,8 +439,10 @@ const hotZoneTypes: {
 		order: 'unshift',
 	},
 ]
-const splitLineHoverColor=''
-const splitLineDefaultColor=''
+// splitLineHoverColor '#000'
+const splitLineHoverColor='#00acec'
+const splitLineDefaultColor='#000'
+const splitLineDash=[5, 3]
 class PanelController {
 	domElement = document.createElement('div')
 	panelDomCreator = new PanelDomCreator()
@@ -460,7 +461,7 @@ class PanelController {
 			fillStyle: 'rgba(0,0,0,0.1)',
 			strokeStyle: 'rgba(0,0,0,0.8)',
 			lineWidth: 1,
-			lineDash: [5, 3],
+			lineDash: splitLineDash,
 		})
 	)
 	floatShape: Graph2D<RectGeometry, StandStyle> = new Graph2D(
@@ -475,7 +476,7 @@ class PanelController {
 	splitLine: Graph2D<PolyGeometry, StandStyle> = new Graph2D(
 		new PolyGeometry(),
 		new StandStyle({
-			strokeStyle: 'rgba(4, 0, 255, 0.8)',
+			strokeStyle: splitLineHoverColor,
 			lineWidth: 2,
 			lineDash: [],
 		})
@@ -527,23 +528,7 @@ class PanelController {
 			})
 		})
 		window.addEventListener('mouseup', () => {
-			if (this.currentHotZone) {
-				const {
-					userData: { panel, direction, order },
-				} = this.currentHotZone as any
-				panel.addPanel(this.currentDragPanel, direction, order)
-			}
-			this.panelControlState = undefined
-			this.currentMousedownUUID = undefined
-			this.currentDragPanel = undefined
-			this.currentHotZone = undefined
-			splitArea.visible = false
-			floatShape.visible = false
-			splitLine.style.lineDash = []
-			panelTreeMask.render()
-			splitLine.position = new Vector2()
-			floatShape.position = new Vector2()
-			dragStartPos.set(0)
+			this.totalMouseup()
 		})
 	}
   setDomElement(domElement:HTMLDivElement){
@@ -553,6 +538,9 @@ class PanelController {
     })
     domElement.addEventListener('mousemove',(event: MouseEvent)=>{
       this.totalMousemove(event)
+    })
+    domElement.addEventListener('mouseleave',()=>{
+      this.totalMouseleave()
     })
     this.appendMask()
     this.updateHotZone()
@@ -605,8 +593,8 @@ class PanelController {
 			dragStartPos.copy(panelTreeMask.pageToCanvas(pageX, pageY))
 			if (this.currentHoverLine) {
 				this.panelControlState = 'startStretch'
-        splitLine.style.strokeStyle='#000'
-				splitLine.style.lineDash = [5, 3]
+        splitLine.style.strokeStyle=splitLineDefaultColor
+				splitLine.style.lineDash = splitLineDash
 			}
 		}
 		panelTreeMask.render()
@@ -621,25 +609,25 @@ class PanelController {
 			hotLines,
 			splitLine,
 			dragEndPos,
+      currentMousedownUUID,
+      dragStartPos
 		} = this
 		const { buttons, currentTarget, pageX, pageY } = event
 		const worldPosition = panelTreeMask.pageToCanvas(pageX, pageY)
 		if (buttons == 1) {
 			dragEndPos.copy(worldPosition)
-			if (this.panelControlState == 'startDrag') {
+      const distance=worldPosition.clone().sub(dragStartPos).length()
+			if (this.panelControlState == 'startDrag'&& distance>5 ) {
 				this.panelControlState = 'dragging'
-				if (this.currentMousedownUUID == undefined) {
+				if (currentMousedownUUID == undefined) {
 					console.warn('currentMousedownUUID 丢失')
 				} else {
-          // console.log('this.currentMousedownUUID',this.currentMousedownUUID);
-					const target = panelTree.getChildByUUID(this.currentMousedownUUID)
-          // console.log('target',target);
+					const target = panelTree.getChildByUUID(currentMousedownUUID)
 					if (target) {
 						this.currentDragPanel = target
 						splitArea.visible = true
 						floatShape.visible = true
 						target.remove()
-						// this.updateHotZone()
 					} else {
 						console.warn('没有找到拖拽目标')
 					}
@@ -692,7 +680,7 @@ class PanelController {
 					if (this.currentHoverLine != hotLine) {
 						this.currentHoverLine = hotLine as Graph2D<PolyGeometry, StandStyle>
 						splitLine.visible = true
-            splitLine.style.strokeStyle='rgba(4, 0, 255, 0.8)'
+            splitLine.style.strokeStyle=splitLineHoverColor
 						splitLine.geometry = hotLine.geometry
 					}
 					isHover = true
@@ -711,6 +699,41 @@ class PanelController {
 		this.updateCursor(currentTarget as HTMLElement)
 		panelTreeMask.render()
 	}
+  totalMouseup(){
+    const {
+			panelTreeMask,
+			floatShape,
+			splitArea,
+			splitLine,
+			dragStartPos,
+		} = this
+    if (this.currentHotZone) {
+      const {
+        userData: { panel, direction, order },
+      } = this.currentHotZone as any
+      panel.addPanel(this.currentDragPanel, direction, order)
+    }
+    this.panelControlState = undefined
+    this.currentMousedownUUID = undefined
+    this.currentDragPanel = undefined
+    this.currentHotZone = undefined
+    splitArea.visible = false
+    floatShape.visible = false
+    splitLine.style.lineDash = []
+    splitLine.style.strokeStyle = splitLineHoverColor
+    panelTreeMask.render()
+    splitLine.position = new Vector2()
+    floatShape.position = new Vector2()
+    dragStartPos.set(0)
+  }
+  totalMouseleave(){
+    this.currentHoverLine = undefined
+    this.splitLine.visible = false
+    if (this.hoverState == 'readyStretch') {
+      this.hoverState = undefined
+    }
+    this.panelTreeMask.render()
+  }
 
 	updateCursor(domElement: HTMLElement) {
 		if (!domElement) {

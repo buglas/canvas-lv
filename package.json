@@ -14,6 +14,7 @@
 		"@types/dat.gui": "^0.7.7",
 		"@types/three": "^0.177.0",
 		"dat.gui": "^0.7.9",
+		"element-plus": "^2.11.4",
 		"three": "^0.177.0",
 		"vue": "^3.2.47",
 		"vue-router": "^4.1.6"
